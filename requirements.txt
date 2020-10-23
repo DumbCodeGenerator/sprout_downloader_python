@@ -1,0 +1,5 @@
+colorama==0.4.3
+requests==2.22.0
+validators==0.14.2
+m3u8==0.5.4
+pycryptodome==3.9.7
