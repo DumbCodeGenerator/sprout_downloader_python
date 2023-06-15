@@ -61,6 +61,9 @@ if __name__ == '__main__':
     data = base64.b64decode(data).decode('utf8')
     data = json.loads(data)
 
+    # Remove the double quotes in the title name
+    title = data.get('title').replace('"', '')
+
     m3u8Param = data.get('signatures').get('m')
     keyParam = data.get('signatures').get('k')
     tsParam = data.get('signatures').get('t')
@@ -106,25 +109,25 @@ if __name__ == '__main__':
     keyBytes = session.get(sign(keyURI)).content
 
     cipher = AES.new(keyBytes, AES.MODE_CBC, iv=iv)
-                
+
 
     m = mp.Manager()
     queue = m.Queue()
-    
+
     totalSegm = len(m3u8_obj.segments)
-    
-    if not os.path.exists(data.get('title')):
-        os.mkdir(data.get('title'))
-    
+
+    if not os.path.exists(title):
+        os.mkdir(title)
+
     for segment in m3u8_obj.segments:
-        queue.put({'url': sign(baseUrl + segment.uri), 'filename': segment.uri, 'title': data.get('title'), 'total': totalSegm})
+        queue.put({'url': sign(baseUrl + segment.uri), 'filename': segment.uri, 'title': title, 'total': totalSegm})
 
     with mp.Pool() as pool:
         ts_filenames = pool.starmap(saveSegment, [(queue, i) for i in range(totalSegm)])
         ts_filenames.sort()
 
-    ts_name = data.get('title') + ".ts"
-    mp4_name = data.get('title') + ".mp4"
+    ts_name = title + ".ts"
+    mp4_name = title + ".mp4"
 
     print(Fore.YELLOW + Style.DIM + "\nConcat the segments...")
     ts_filenames.sort()
@@ -133,7 +136,7 @@ if __name__ == '__main__':
             with open(ts_file, 'rb') as mergefile:
                 merged.write(cipher.decrypt(mergefile.read()))
 
-    shutil.rmtree(data.get('title'))
+    shutil.rmtree(title)
 
     print(Fore.YELLOW + Style.DIM + "Convert to mp4...")
     p = subprocess.run(['ffmpeg', '-y', '-i', ts_name, '-map', '0', '-c', 'copy', mp4_name], capture_output=True)
@@ -141,6 +144,6 @@ if __name__ == '__main__':
         os.remove(ts_name)
     else:
         print(Fore.YELLOW + Style.DIM + "FFMpeg not found. File not converted!")
-            
+
     print(Fore.GREEN + Style.DIM + '\nVideo downloaded!')
     stop()
